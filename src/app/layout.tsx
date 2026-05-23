@@ -11,7 +11,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            try {
+              const stored = localStorage.getItem('theme');
+              const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              const theme = stored === 'dark' || (!stored && systemDark) ? 'dark' : 'light';
+              document.documentElement.classList.toggle('dark', theme === 'dark');
+              document.documentElement.style.colorScheme = theme;
+            } catch {}
+          `,
+        }}
+      />
       <body className={inter.className}>{children}</body>
     </html>
   )
