@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { BarChart3, FolderOpen, LayoutDashboard, Settings, LogOut, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import ThemeToggle from '@/components/theme/ThemeToggle'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -51,8 +50,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="space-y-1 border-t border-gray-100 p-3">
-        <ThemeToggle />
+      <div className="border-t border-gray-100 p-3">
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
