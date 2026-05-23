@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,6 +30,25 @@ export default function SettingsPage() {
 
   const profileForm = useForm<ProfileData>({ resolver: zodResolver(profileSchema) })
   const passwordForm = useForm<PasswordData>({ resolver: zodResolver(passwordSchema) })
+  const { reset: resetProfile } = profileForm
+
+  useEffect(() => {
+    async function loadProfile() {
+      const res = await fetch('/api/users/me')
+      const body = (await res.json().catch(() => ({}))) as {
+        data?: ProfileData
+        error?: string
+      }
+
+      if (res.ok && body.data) {
+        resetProfile({ name: body.data.name, email: body.data.email })
+      } else if (body.error) {
+        setProfileMsg(body.error)
+      }
+    }
+
+    loadProfile()
+  }, [resetProfile])
 
   async function onProfileSubmit(data: ProfileData) {
     const res = await fetch('/api/users/me', {
@@ -37,7 +56,10 @@ export default function SettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
-    setProfileMsg(res.ok ? 'Perfil atualizado com sucesso.' : 'Erro ao atualizar perfil.')
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    setProfileMsg(
+      res.ok ? 'Perfil atualizado com sucesso.' : (body.error ?? 'Erro ao atualizar perfil.')
+    )
   }
 
   async function onPasswordSubmit(data: PasswordData) {
