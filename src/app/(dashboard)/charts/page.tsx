@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
+import DeleteChartButton from '@/components/charts/DeleteChartButton'
 
 export default async function ChartsPage() {
   const user = await getAuthUser()
@@ -38,24 +39,28 @@ export default async function ChartsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {charts.map((chart) => (
-            <Link
+            <div
               key={chart.id}
-              href={`/dashboard/charts/${chart.id}`}
               className="group rounded-xl bg-white p-6 ring-1 ring-gray-200 transition hover:ring-primary-300"
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                   {chart.type}
                 </span>
-                <span className="text-xs text-gray-400">{formatDate(chart.createdAt)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{formatDate(chart.createdAt)}</span>
+                  <DeleteChartButton chartId={chart.id} chartTitle={chart.title} />
+                </div>
               </div>
-              <h2 className="font-medium text-gray-900 group-hover:text-primary-600">
-                {chart.title}
-              </h2>
-              <p className="mt-1 text-xs text-gray-400">
-                {chart.dataRecord.title} - {chart.project?.name ?? 'Sem projeto'}
-              </p>
-            </Link>
+              <Link href={`/dashboard/charts/${chart.id}`} className="block">
+                <h2 className="font-medium text-gray-900 group-hover:text-primary-600">
+                  {chart.title}
+                </h2>
+                <p className="mt-1 text-xs text-gray-400">
+                  {chart.dataRecord.title} - {chart.project?.name ?? 'Sem projeto'}
+                </p>
+              </Link>
+            </div>
           ))}
         </div>
       )}

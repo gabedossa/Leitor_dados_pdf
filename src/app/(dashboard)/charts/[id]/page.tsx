@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import ChartTypeSwitcher from '@/components/charts/ChartTypeSwitcher'
+import DeleteChartButton from '@/components/charts/DeleteChartButton'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
@@ -64,14 +65,22 @@ export default async function ChartDetailPage({ params }: Props) {
             {formatDate(chart.createdAt)}
           </p>
         </div>
-        <Link
-          href={`/dashboard/charts/new?dataRecordId=${chart.dataRecordId}${
-            chart.projectId ? `&projectId=${chart.projectId}` : ''
-          }`}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50"
-        >
-          Criar outro grafico
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/charts/new?dataRecordId=${chart.dataRecordId}${
+              chart.projectId ? `&projectId=${chart.projectId}` : ''
+            }`}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50"
+          >
+            Criar outro grafico
+          </Link>
+          <DeleteChartButton
+            chartId={chart.id}
+            chartTitle={chart.title}
+            redirectTo="/dashboard/charts"
+            className="rounded-lg px-3 py-2 ring-1 ring-red-200"
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
