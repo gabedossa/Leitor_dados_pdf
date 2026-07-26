@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
+import DeleteProjectButton from '@/components/projects/DeleteProjectButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -44,12 +45,15 @@ export default async function ProjectDetailPage({ params }: Props) {
             <p className="mt-1 text-sm text-gray-500">{project.description}</p>
           )}
         </div>
-        <Link
-          href={`/dashboard/projects/${id}/edit`}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50"
-        >
-          Editar
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/projects/${id}/edit`}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50"
+          >
+            Editar
+          </Link>
+          <DeleteProjectButton projectId={id} projectName={project.name} />
+        </div>
       </div>
 
       <section className="mb-8">

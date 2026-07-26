@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
+import { prisma } from '@/lib/prisma'
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET ?? 'fallback-dev-secret-change-in-production-min-32-chars'
@@ -12,6 +12,24 @@ export interface TokenPayload {
 
 export const TOKEN_COOKIE = 'auth_token'
 const TOKEN_EXPIRY = '7d'
+
+// Login desabilitado: toda requisição é tratada como este usuário fixo,
+// criado automaticamente no banco na primeira chamada.
+const DEV_USER_EMAIL = 'dev@local'
+const DEV_USER_NAME = 'Usuário Dev'
+let devUserId: string | null = null
+
+async function getDevUser(): Promise<TokenPayload> {
+  if (!devUserId) {
+    const user = await prisma.user.upsert({
+      where: { email: DEV_USER_EMAIL },
+      update: {},
+      create: { email: DEV_USER_EMAIL, name: DEV_USER_NAME, passwordHash: '' },
+    })
+    devUserId = user.id
+  }
+  return { userId: devUserId, email: DEV_USER_EMAIL }
+}
 
 export async function signToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
@@ -31,10 +49,7 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 }
 
 export async function getAuthUser(): Promise<TokenPayload | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(TOKEN_COOKIE)?.value
-  if (!token) return null
-  return verifyToken(token)
+  return getDevUser()
 }
 
 export function cookieOptions(maxAge: number) {

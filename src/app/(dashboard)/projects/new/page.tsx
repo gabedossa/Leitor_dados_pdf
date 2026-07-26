@@ -9,18 +9,33 @@ interface ProjectResponse {
   error?: string
 }
 
+interface PdfResponse {
+  data?: { id: string }
+  error?: string
+}
+
+interface ExtractResponse {
+  message?: string
+  error?: string
+  dataRecords?: { id: string; title: string }[]
+  charts?: { id: string; title: string; type: string }[]
+}
+
 export default function NewProjectPage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState('#3b82f6')
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [step, setStep] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setIsSubmitting(true)
+    setStep('Criando projeto...')
 
     try {
       const res = await fetch('/api/projects', {
@@ -36,15 +51,51 @@ export default function NewProjectPage() {
 
       if (!res.ok || !body.data?.id) {
         setError(body.error ?? 'Erro ao criar projeto.')
+        setStep(null)
         return
       }
 
-      router.push(`/dashboard/projects/${body.data.id}`)
+      const projectId = body.data.id
+
+      if (file) {
+        setStep('Enviando PDF...')
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('projectId', projectId)
+
+        const pdfRes = await fetch('/api/pdfs', { method: 'POST', body: formData })
+        const pdfBody = (await pdfRes.json().catch(() => ({}))) as PdfResponse
+
+        if (!pdfRes.ok || !pdfBody.data?.id) {
+          setError(
+            `Projeto criado, mas o envio do PDF falhou: ${pdfBody.error ?? 'erro desconhecido'}. Você pode tentar novamente na página do projeto.`
+          )
+          router.push(`/dashboard/projects/${projectId}`)
+          router.refresh()
+          return
+        }
+
+        setStep('Extraindo dados e gerando gráficos...')
+        const extractRes = await fetch(`/api/pdfs/${pdfBody.data.id}/extract`, { method: 'POST' })
+        const extractBody = (await extractRes.json().catch(() => ({}))) as ExtractResponse
+
+        if (!extractRes.ok) {
+          setError(
+            `Projeto e PDF criados, mas a extração falhou: ${extractBody.error ?? 'erro desconhecido'}.`
+          )
+          router.push(`/dashboard/projects/${projectId}`)
+          router.refresh()
+          return
+        }
+      }
+
+      router.push(`/dashboard/projects/${projectId}`)
       router.refresh()
     } catch {
       setError('Erro de conexao. Tente novamente.')
     } finally {
       setIsSubmitting(false)
+      setStep(null)
     }
   }
 
@@ -101,6 +152,22 @@ export default function NewProjectPage() {
             </div>
           </div>
 
+          <div className="border-t border-gray-100 pt-5">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              PDF com dados (opcional)
+            </label>
+            <p className="mb-2 text-xs text-gray-400">
+              Envie um PDF com uma tabela de dados e o sistema extrai os valores e gera os
+              gráficos automaticamente assim que o projeto for criado.
+            </p>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              className="block w-full rounded-lg border border-gray-300 text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+            />
+          </div>
+
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
           <div className="flex items-center gap-3">
@@ -109,7 +176,7 @@ export default function NewProjectPage() {
               disabled={isSubmitting}
               className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
             >
-              {isSubmitting ? 'Criando...' : 'Criar projeto'}
+              {isSubmitting ? step ?? 'Criando...' : 'Criar projeto'}
             </button>
             <Link
               href="/dashboard/projects"

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import ChartPreview from '@/components/charts/ChartPreview'
+import ChartTypeSwitcher from '@/components/charts/ChartTypeSwitcher'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
@@ -58,9 +58,6 @@ export default async function ChartDetailPage({ params }: Props) {
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold text-gray-900">{chart.title}</h1>
-            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-              {chart.type}
-            </span>
           </div>
           <p className="mt-1 text-sm text-gray-500">
             {chart.dataRecord.title} - {chart.project?.name ?? 'Sem projeto'} -{' '}
@@ -78,9 +75,10 @@ export default async function ChartDetailPage({ params }: Props) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <ChartPreview
-          type={chart.type}
+        <ChartTypeSwitcher
+          chartId={chart.id}
           title={chart.title}
+          initialType={chart.type}
           series={series}
           points={points}
           config={config}

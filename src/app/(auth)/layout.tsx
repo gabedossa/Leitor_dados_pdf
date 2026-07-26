@@ -1,7 +1,6 @@
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">{children}</div>
-    </div>
-  )
+import { redirect } from 'next/navigation'
+
+// Login desabilitado: nunca mostra as páginas de auth, sempre vai para o dashboard.
+export default function AuthLayout() {
+  redirect('/dashboard')
 }

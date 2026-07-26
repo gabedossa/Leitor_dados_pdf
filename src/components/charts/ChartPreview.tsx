@@ -12,12 +12,30 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 import type { ChartType, ChartConfig, DataSeriesItem, DataPointInput } from '@/types'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
+
+// Legenda em HTML puro (não o <Legend> do Recharts) para que o card cresça
+// junto com a quantidade de itens em vez de um número fixo de linhas
+// sobrepor o conteúdo seguinte.
+function ChartLegend({ items }: { items: { name: string; color: string }[] }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-gray-100 pt-3">
+      {items.map((item, i) => (
+        <div key={`${item.name}-${i}`} className="flex max-w-full items-center gap-1.5 text-xs text-gray-600">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: item.color }}
+          />
+          <span className="truncate">{item.name}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 interface ChartPreviewProps {
   type: ChartType
@@ -40,26 +58,52 @@ export default function ChartPreview({
 
   if (type === 'PIE') {
     const firstSeries = series[0]
-    const pieData = points.map((p, i) => ({
+    const rawSlices = points.map((p) => ({
       name: p.label,
       value: firstSeries ? (p.values[firstSeries.name] ?? 0) : 0,
-      fill: COLORS[i % COLORS.length],
     }))
+
+    // Pizza legível fica em até ~6 fatias: acima disso, mantém as maiores
+    // e agrupa o resto em "Outros" em vez de lotar a legenda com dezenas de itens.
+    const MAX_SLICES = 6
+    const sorted = [...rawSlices].sort((a, b) => b.value - a.value)
+    const visible = sorted.length > MAX_SLICES ? sorted.slice(0, MAX_SLICES - 1) : sorted
+    const overflow = sorted.length > MAX_SLICES ? sorted.slice(MAX_SLICES - 1) : []
+    const othersTotal = overflow.reduce((sum, item) => sum + item.value, 0)
+
+    const pieData = [
+      ...visible.map((item, i) => ({ ...item, fill: COLORS[i % COLORS.length] })),
+      ...(overflow.length > 0
+        ? [{ name: `Outros (${overflow.length})`, value: othersTotal, fill: '#9ca3af' }]
+        : []),
+    ]
 
     return (
       <div className="rounded-xl bg-white p-4 ring-1 ring-gray-200">
         <h3 className="mb-4 text-sm font-medium text-gray-700">{title}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={110}
+              stroke="#fff"
+              strokeWidth={2}
+              label={({ percent }) => `${Math.round((percent ?? 0) * 100)}%`}
+            >
               {pieData.map((entry, i) => (
                 <Cell key={i} fill={entry.fill} />
               ))}
             </Pie>
-            <Tooltip />
-            {showLegend && <Legend />}
+            <Tooltip formatter={(value: number) => value.toLocaleString('pt-BR')} />
           </PieChart>
         </ResponsiveContainer>
+        {showLegend && (
+          <ChartLegend items={pieData.map((d) => ({ name: d.name, color: d.fill }))} />
+        )}
       </div>
     )
   }
@@ -73,6 +117,11 @@ export default function ChartPreview({
       : {},
   }
 
+  const seriesLegendItems = series.map((s, i) => ({
+    name: s.name,
+    color: s.color ?? COLORS[i % COLORS.length],
+  }))
+
   if (type === 'BAR') {
     return (
       <div className="rounded-xl bg-white p-4 ring-1 ring-gray-200">
@@ -83,7 +132,6 @@ export default function ChartPreview({
             <XAxis dataKey="name" {...axisProps.xAxis} />
             <YAxis {...axisProps.yAxis} />
             <Tooltip />
-            {showLegend && <Legend />}
             {series.map((s, i) => (
               <Bar
                 key={s.name}
@@ -94,6 +142,7 @@ export default function ChartPreview({
             ))}
           </BarChart>
         </ResponsiveContainer>
+        {showLegend && <ChartLegend items={seriesLegendItems} />}
       </div>
     )
   }
@@ -107,7 +156,6 @@ export default function ChartPreview({
           <XAxis dataKey="name" {...axisProps.xAxis} />
           <YAxis {...axisProps.yAxis} />
           <Tooltip />
-          {showLegend && <Legend />}
           {series.map((s, i) => (
             <Line
               key={s.name}
@@ -120,6 +168,7 @@ export default function ChartPreview({
           ))}
         </LineChart>
       </ResponsiveContainer>
+      {showLegend && <ChartLegend items={seriesLegendItems} />}
     </div>
   )
 }
