@@ -69,7 +69,7 @@ export interface ShareDataOptions {
   to: string
   senderName: string
   dataTitle: string
-  csvContent: string
+  pdfContent: Buffer
   message?: string
 }
 
@@ -82,15 +82,15 @@ export async function sendDataShareEmail(opts: ShareDataOptions): Promise<void> 
     text: [
       `${opts.senderName} compartilhou o dataset "${opts.dataTitle}" com você.`,
       opts.message ? `\nMensagem: ${opts.message}` : '',
-      '\nOs dados estão em anexo (CSV).',
+      '\nOs dados estão em anexo (PDF).',
     ]
       .filter(Boolean)
       .join(''),
     attachments: [
       {
-        filename: `${opts.dataTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.csv`,
-        content: opts.csvContent,
-        contentType: 'text/csv; charset=utf-8',
+        filename: `${opts.dataTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
+        content: opts.pdfContent,
+        contentType: 'application/pdf',
       },
     ],
   })
@@ -161,9 +161,9 @@ function chartShareHtml(opts: ShareChartOptions & { chartUrl: string }): string 
 function dataShareHtml(opts: ShareDataOptions): string {
   return layout(`
     <h1>${escapeHtml(opts.senderName)} compartilhou dados com você</h1>
-    <p>O dataset <strong>${escapeHtml(opts.dataTitle)}</strong> está em anexo no formato CSV.</p>
+    <p>O dataset <strong>${escapeHtml(opts.dataTitle)}</strong> está em anexo no formato PDF.</p>
     ${opts.message ? `<div class="message-box">${escapeHtml(opts.message)}</div>` : ''}
-    <p>Abra o arquivo CSV anexo com Excel, Google Sheets ou qualquer editor de planilhas.</p>
+    <p>Abra o arquivo PDF anexo para ver a tabela de dados.</p>
   `)
 }
 

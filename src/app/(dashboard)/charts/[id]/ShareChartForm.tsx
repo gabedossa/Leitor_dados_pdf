@@ -78,7 +78,7 @@ export default function ShareChartForm({ chartId }: { chartId: string }) {
             onChange={(event) => setIncludeData(event.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-primary-600"
           />
-          Incluir CSV dos dados
+          Incluir PDF dos dados
         </label>
 
         {status && (

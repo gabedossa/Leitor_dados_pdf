@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
 import { sendChartShareEmail, sendDataShareEmail } from '@/lib/email'
+import { buildDataPdf } from '@/lib/data-pdf'
 
 const schema = z.object({
   to: z.string().email('E-mail de destino inválido'),
@@ -52,14 +53,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       message,
     })
 
-    // Envia CSV junto se solicitado
+    // Envia PDF dos dados junto se solicitado
     if (includeData) {
-      const csv = buildCsv(chart.dataRecord)
+      const pdf = await buildDataPdf(chart.dataRecord.title, chart.dataRecord)
       await sendDataShareEmail({
         to,
         senderName: chart.user.name,
         dataTitle: chart.dataRecord.title,
-        csvContent: csv,
+        pdfContent: pdf,
         message,
       })
     }
@@ -72,33 +73,4 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   return NextResponse.json({ message: 'E-mail enviado com sucesso' })
-}
-
-// ─────────────────────────────────────────────
-// CSV builder
-// ─────────────────────────────────────────────
-
-interface DataRecordWithRelations {
-  columns: { id: string; name: string; displayOrder: number }[]
-  points: {
-    id: string
-    label: string
-    displayOrder: number
-    values: { dataColumnId: string; value: number }[]
-  }[]
-}
-
-function buildCsv(record: DataRecordWithRelations): string {
-  const header = ['Categoria', ...record.columns.map((c) => c.name)].join(';')
-
-  const rows = record.points.map((point) => {
-    const valueMap = Object.fromEntries(point.values.map((v) => [v.dataColumnId, v.value]))
-    const cells = record.columns.map((col) => {
-      const val = valueMap[col.id]
-      return val !== undefined ? String(val) : ''
-    })
-    return [point.label, ...cells].join(';')
-  })
-
-  return [header, ...rows].join('\n')
 }
