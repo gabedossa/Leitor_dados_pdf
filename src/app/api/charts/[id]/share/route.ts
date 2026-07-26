@@ -42,25 +42,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (!chart) return NextResponse.json({ error: 'Gráfico não encontrado' }, { status: 404 })
 
-  // Envia link do gráfico
-  await sendChartShareEmail({
-    to,
-    senderName: chart.user.name,
-    chartTitle: chart.title,
-    chartId: chart.id,
-    message,
-  })
-
-  // Envia CSV junto se solicitado
-  if (includeData) {
-    const csv = buildCsv(chart.dataRecord)
-    await sendDataShareEmail({
+  try {
+    // Envia link do gráfico
+    await sendChartShareEmail({
       to,
       senderName: chart.user.name,
-      dataTitle: chart.dataRecord.title,
-      csvContent: csv,
+      chartTitle: chart.title,
+      chartId: chart.id,
       message,
     })
+
+    // Envia CSV junto se solicitado
+    if (includeData) {
+      const csv = buildCsv(chart.dataRecord)
+      await sendDataShareEmail({
+        to,
+        senderName: chart.user.name,
+        dataTitle: chart.dataRecord.title,
+        csvContent: csv,
+        message,
+      })
+    }
+  } catch (err) {
+    const details = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json(
+      { error: 'Falha ao enviar o e-mail. Verifique a configuração de SMTP.', details },
+      { status: 502 }
+    )
   }
 
   return NextResponse.json({ message: 'E-mail enviado com sucesso' })
