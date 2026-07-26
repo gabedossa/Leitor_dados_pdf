@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
+import { connection } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 const secret = new TextEncoder().encode(
@@ -49,6 +50,10 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 }
 
 export async function getAuthUser(): Promise<TokenPayload | null> {
+  // getDevUser() no longer reads cookies(), so without this, pages that call
+  // getAuthUser() lose their only dynamic-rendering signal and Next.js tries to
+  // prerender them at build time — running a DB write with no DATABASE_URL available.
+  await connection()
   return getDevUser()
 }
 
