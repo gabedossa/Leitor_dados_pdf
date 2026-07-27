@@ -8,6 +8,19 @@ const updateSchema = z.object({
   description: z.string().optional(),
   recordDate: z.string().datetime().optional(),
   projectId: z.string().nullable().optional(),
+  columns: z
+    .array(z.object({ name: z.string().min(1), color: z.string().optional() }))
+    .min(1)
+    .optional(),
+  points: z
+    .array(
+      z.object({
+        label: z.string().min(1),
+        values: z.record(z.string(), z.number()),
+      })
+    )
+    .min(1)
+    .optional(),
 })
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -40,18 +53,59 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json()
   const parsed = updateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    return NextResponse.json({ error: 'Dados inválidos', details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const result = await prisma.dataRecord.updateMany({
-    where: { id, userId: user.userId },
-    data: {
-      ...parsed.data,
-      ...(parsed.data.recordDate ? { recordDate: new Date(parsed.data.recordDate) } : {}),
-    },
-  })
+  const { columns, points, title, description, recordDate, projectId } = parsed.data
 
-  if (result.count === 0) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
+  const existing = await prisma.dataRecord.findFirst({ where: { id, userId: user.userId } })
+  if (!existing) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.dataRecord.update({
+        where: { id },
+        data: {
+          ...(title !== undefined ? { title } : {}),
+          ...(description !== undefined ? { description } : {}),
+          ...(projectId !== undefined ? { projectId } : {}),
+          ...(recordDate ? { recordDate: new Date(recordDate) } : {}),
+        },
+      })
+
+      if (columns && points) {
+        // Substitui séries/pontos/valores por completo — mais simples e seguro do
+        // que tentar casar (diff) os itens antigos com os novos por nome/posição.
+        await tx.dataPoint.deleteMany({ where: { dataRecordId: id } })
+        await tx.dataColumn.deleteMany({ where: { dataRecordId: id } })
+
+        const createdColumns = await tx.dataColumn.createManyAndReturn({
+          data: columns.map((col, i) => ({ ...col, dataRecordId: id, displayOrder: i })),
+        })
+        const columnMap = Object.fromEntries(createdColumns.map((c) => [c.name, c.id]))
+
+        const createdPoints = await tx.dataPoint.createManyAndReturn({
+          data: points.map((point, i) => ({ label: point.label, dataRecordId: id, displayOrder: i })),
+        })
+
+        const dataValues = points.flatMap((point, i) =>
+          Object.entries(point.values)
+            .filter(([colName]) => columnMap[colName])
+            .map(([colName, value]) => ({
+              dataPointId: createdPoints[i].id,
+              dataColumnId: columnMap[colName],
+              value,
+            }))
+        )
+
+        if (dataValues.length > 0) {
+          await tx.dataValue.createMany({ data: dataValues })
+        }
+      }
+    },
+    { timeout: 30000 }
+  )
+
   return NextResponse.json({ message: 'Registro atualizado' })
 }
 

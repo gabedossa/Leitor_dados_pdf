@@ -67,6 +67,12 @@ export default async function ChartDetailPage({ params }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href={`/dashboard/data/${chart.dataRecordId}/edit?chartId=${chart.id}`}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50"
+          >
+            Editar dados
+          </Link>
+          <Link
             href={`/dashboard/charts/new?dataRecordId=${chart.dataRecordId}${
               chart.projectId ? `&projectId=${chart.projectId}` : ''
             }`}
